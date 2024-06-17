@@ -10,9 +10,24 @@ import ChatbotScreen from './screens/ChatbotScreen';
 import BloodPressureScreen from './screens/BloodPressureScreen';
 import ECGScreen from './screens/ECGScreen';
 import ECGResultScreen from './screens/ECGResultScreen';
-import UrineTestScreen from './screens/UrineTestScreen';
+import BMI from './screens/BMI';
+import LoadingScreen from './screens/LoadingScreen';
+import ResultScreen from './screens/ResultScreen';
+import DepressionTestScreen from './screens/DepressionTestScreen';
+import DepressionResultScreen from './screens/DepressionResultScreen';
+import DepressionIntroScreen from './screens/DepressionIntroScreen';
+import BMIDescriptionScreen from './screens/BMIDescriptionScreen';
+import BloodPressureIntroScreen from './screens/BloodPressureIntroScreen';
 
 const Stack = createStackNavigator();
+
+const screenOptionsWithBackButton = ({ navigation }) => ({
+  headerLeft: () => (
+    <TouchableOpacity onPress={() => navigation.navigate('Main')}>
+      <Text style={{ marginLeft: 15, color: '#007aff' }}>돌아가기</Text>
+    </TouchableOpacity>
+  ),
+});
 
 export default function App() {
   return (
@@ -30,18 +45,63 @@ export default function App() {
         <Stack.Screen 
           name="Chatbot" 
           component={ChatbotScreen} 
-          options={({ navigation }) => ({
-            headerLeft: () => (
-              <TouchableOpacity onPress={() => navigation.navigate('Main')}>
-                <Text style={{ marginLeft: 15, color: '#007aff' }}>돌아가기</Text>
-              </TouchableOpacity>
-            ),
-          })}
+          options={screenOptionsWithBackButton}
         />
-        <Stack.Screen name="BloodPressure" component={BloodPressureScreen} />
-        <Stack.Screen name="ECG" component={ECGScreen} />
-        <Stack.Screen name="ECGResult" component={ECGResultScreen} />
-        <Stack.Screen name="UrineTest" component={UrineTestScreen} />
+        <Stack.Screen 
+          name="BloodPressureIntro" 
+          component={BloodPressureIntroScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="BloodPressure" 
+          component={BloodPressureScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="ECG" 
+          component={ECGScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="ECGResult" 
+          component={ECGResultScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="BMIDescription" 
+          component={BMIDescriptionScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="BMICheck" 
+          component={BMI}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="Loading" 
+          component={LoadingScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="Result" 
+          component={ResultScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="DepressionIntro" 
+          component={DepressionIntroScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="DepressionTest" 
+          component={DepressionTestScreen}
+          options={screenOptionsWithBackButton}
+        />
+        <Stack.Screen 
+          name="DepressionResult" 
+          component={DepressionResultScreen}
+          options={screenOptionsWithBackButton}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

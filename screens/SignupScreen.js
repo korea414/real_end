@@ -26,13 +26,16 @@ export default function SignupScreen({ navigation }) {
     const fileUri = FileSystem.documentDirectory + 'users.txt';
 
     try {
+      console.log('Checking if user data file exists...');
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      
       let existingData = '';
-      try {
+      if (fileInfo.exists) {
+        console.log('User data file exists, reading data...');
         existingData = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.UTF8 });
-      } catch (error) {
-        if (error.code !== 'E_FILE_NOT_READABLE') {
-          throw error;
-        }
+        console.log('Existing data read successfully');
+      } else {
+        console.log('User data file does not exist, creating new file...');
       }
 
       const users = existingData.split('\n').filter(Boolean);
@@ -47,9 +50,12 @@ export default function SignupScreen({ navigation }) {
       }
 
       const newData = existingData + user;
+      console.log('Writing new user data...');
       await FileSystem.writeAsStringAsync(fileUri, newData, { encoding: FileSystem.EncodingType.UTF8 });
+      console.log('New user data written successfully');
       Alert.alert('Success', 'User registered successfully', [{ text: 'OK', onPress: () => navigation.navigate('Login') }]);
     } catch (error) {
+      console.log('Error occurred during signup:', error);
       Alert.alert('Error', 'Could not register user');
     }
   };

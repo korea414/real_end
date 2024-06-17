@@ -1,23 +1,18 @@
-// BloodPressureScreen.js
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Modal, FlatList, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Modal, FlatList, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LottieView from 'lottie-react-native';
 
 export default function BloodPressureScreen({ navigation }) {
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
-  const [records, setRecords] = useState([
-    {
-      systolic: 120,
-      diastolic: 80,
-      status: '정상',
-      advice: '혈압이 정상 범위입니다. 건강을 유지하세요!',
-      timestamp: new Date().toLocaleString(),
-    },
-  ]);
+  const [records, setRecords] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [resultReady, setResultReady] = useState(false);
+  const [latestRecord, setLatestRecord] = useState(null);
 
   useEffect(() => {
     loadRecords();
@@ -103,10 +98,15 @@ export default function BloodPressureScreen({ navigation }) {
 
     const newRecords = [...records, newRecord];
     setRecords(newRecords);
-    setSystolic('');
-    setDiastolic('');
+    setLatestRecord(newRecord);
     saveRecords(newRecords);
     saveLatestRecord(newRecord); // Save the latest record
+    setIsAnalyzing(true);
+
+    setTimeout(() => {
+      setIsAnalyzing(false);
+      setResultReady(true);
+    }, 30000); // 30초 동안 분석
   };
 
   const chartData = {
@@ -124,13 +124,26 @@ export default function BloodPressureScreen({ navigation }) {
         strokeWidth: 2,
         label: 'Diastolic',
       },
+      {
+        data: Array(records.length).fill(120), // 수축기 기준 값
+        color: (opacity = 1) => `rgba(0, 255, 0, ${opacity})`, // 기준 값 - 초록색
+        strokeWidth: 1,
+        strokeDashArray: [5, 5],
+      },
+      {
+        data: Array(records.length).fill(80), // 이완기 기준 값
+        color: (opacity = 1) => `rgba(0, 255, 0, ${opacity})`, // 기준 값 - 초록색
+        strokeWidth: 1,
+        strokeDashArray: [5, 5],
+      }
     ],
-    legend: ['Systolic', 'Diastolic'],
+    legend: ['Systolic', 'Diastolic', 'Systolic Baseline', 'Diastolic Baseline'],
   };
 
   const openModal = (record) => {
     setSelectedRecord(record);
     setModalVisible(true);
+    setResultReady(true); 
   };
 
   const closeModal = () => {
@@ -140,81 +153,103 @@ export default function BloodPressureScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Systolic"
-          keyboardType="numeric"
-          value={systolic}
-          onChangeText={setSystolic}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Diastolic"
-          keyboardType="numeric"
-          value={diastolic}
-          onChangeText={setDiastolic}
-        />
-        <TouchableOpacity style={styles.button} onPress={analyzeBloodPressure}>
-          <Text style={styles.buttonText}>Analyze</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.clearButton} onPress={clearRecords}>
-          <Text style={styles.clearButtonText}>Clear Data</Text>
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={records}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => openModal(item)}>
-            <View style={styles.resultContainer}>
-              <Text style={styles.resultText}>Date: {item.timestamp}</Text>
-              <Text style={styles.resultText}>Systolic: {item.systolic}</Text>
-              <Text style={styles.resultText}>Diastolic: {item.diastolic}</Text>
-              <Text style={styles.resultText}>Status: {item.status}</Text>
-            </View>
+      {!isAnalyzing && !resultReady && (
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Systolic"
+            keyboardType="numeric"
+            value={systolic}
+            onChangeText={setSystolic}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Diastolic"
+            keyboardType="numeric"
+            value={diastolic}
+            onChangeText={setDiastolic}
+          />
+          <TouchableOpacity style={styles.button} onPress={analyzeBloodPressure}>
+            <Text style={styles.buttonText}>Analyze</Text>
           </TouchableOpacity>
-        )}
-        style={styles.list}
-      />
-      <ScrollView>
-        <LineChart
-          data={chartData}
-          width={Dimensions.get('window').width - 32} // Adjust width for padding
-          height={160}
-          yAxisInterval={1} // 30 단위로 눈금선을 설정
-          yLabelsOffset={24}
-          chartConfig={{
-            backgroundColor: '#f2f2f2',
-            backgroundGradientFrom: '#f2f2f2',
-            backgroundGradientTo: '#f2f2f2',
-            decimalPlaces: 1,
-            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-            propsForDots: {
-              r: '6',
-              strokeWidth: '2',
-              stroke: '#007aff',
-            },
-            propsForBackgroundLines: {
-              strokeDasharray: '', // 이 속성을 설정하면 점선이 아닌 실선으로 표시됩니다.
-            },
-          }}
-          yLabels={['0', '30', '60', '90', '120', '150', '180', '210']} // Y축 레이블
-          bezier
-          style={{
-            marginVertical: 5,
-            borderRadius: 10,
-            marginTop: '8%', // 그래프를 아래로 내리기 위해 추가
-          }}
-        />
-        <TouchableOpacity style={styles.mainButton} onPress={() => navigation.navigate('Main')}>
-          <Text style={styles.mainButtonText}>메인스크린으로 돌아가기</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <LottieView
+            source={require('./lottie_loading.json')}
+            autoPlay
+            loop
+            style={styles.animation}
+          />
+        </View>
+      )}
+
+      {isAnalyzing && (
+        <View style={styles.analyzingContainer}>
+          <ActivityIndicator size="large" color="#007aff" />
+          <Text style={styles.analyzingText}>분석중입니다...</Text>
+          <LottieView
+            source={require('./lottie_loading.json')}
+            autoPlay
+            loop
+            style={styles.animation}
+          />
+        </View>
+      )}
+
+      {resultReady && (
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.resultHeader}>
+            <Text style={styles.resultTitle}>혈압 분석 결과</Text>
+          </View>
+          <View style={styles.resultContainer}>
+            <Text style={styles.resultText}>Systolic: {latestRecord.systolic}</Text>
+            <Text style={styles.resultText}>Diastolic: {latestRecord.diastolic}</Text>
+            <Text style={styles.resultText}>Status: {latestRecord.status}</Text>
+            <Text style={styles.resultText}>Advice: {latestRecord.advice}</Text>
+          </View>
+          <View style={styles.chartContainer}>
+            <LineChart
+              data={chartData}
+              width={Dimensions.get('window').width - 32} // Adjust width for padding
+              height={220}
+              yAxisInterval={1} // 30 단위로 눈금선을 설정
+              yLabelsOffset={24}
+              chartConfig={{
+                backgroundColor: '#f2f2f2',
+                backgroundGradientFrom: '#f2f2f2',
+                backgroundGradientTo: '#f2f2f2',
+                decimalPlaces: 1,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                style: {
+                  borderRadius: 16,
+                },
+                propsForDots: {
+                  r: '6',
+                  strokeWidth: '2',
+                  stroke: '#007aff',
+                },
+                propsForBackgroundLines: {
+                  strokeDasharray: '', // 이 속성을 설정하면 점선이 아닌 실선으로 표시됩니다.
+                },
+              }}
+              bezier
+              style={{
+                marginVertical: 5,
+                borderRadius: 10,
+                marginTop: '8%', // 그래프를 아래로 내리기 위해 추가
+              }}
+            />
+          </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.halfButton} onPress={() => navigation.navigate('Main')}>
+              <Text style={styles.buttonText}>메인스크린으로 돌아가기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.halfButton} onPress={clearRecords}>
+              <Text style={styles.buttonText}>Clear Data</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
+
       {selectedRecord && (
         <Modal
           transparent={true}
@@ -245,16 +280,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f2f2f2',
     paddingTop: 40,
-  },
-  header: {
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: '600',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    color: '#007aff',
   },
   inputContainer: {
     padding: 16,
@@ -288,27 +313,44 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
+    marginVertical: 10,
   },
   clearButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },
-  mainButton: {
+  halfButton: {
     backgroundColor: '#007aff',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginVertical: 10,
+    width: '48%',
   },
-  mainButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  list: {
+  analyzingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  analyzingText: {
+    marginTop: 20,
+    fontSize: 18,
+    color: '#007aff',
+  },
+  resultHeader: {
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '600',
+    padding: 16,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
   resultContainer: {
     padding: 15,
@@ -321,10 +363,39 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
+  resultTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   resultText: {
-    fontSize: 15,
-    marginVertical: 2,
+    fontSize: 18,
+    marginVertical: 5,
     color: '#333',
+  },
+  chartContainer: {
+    marginVertical: 10,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  mainButton: {
+    backgroundColor: '#007aff',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  mainButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -358,5 +429,10 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  animation: {
+    width: 200,
+    height: 200,
+    marginTop: 20,
   },
 });

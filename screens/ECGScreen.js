@@ -1,8 +1,9 @@
-// ECGScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { LineChart, Grid } from 'react-native-svg-charts';
+import { LineChart } from 'react-native-svg-charts';
 import * as shape from 'd3-shape';
+import LottieView from 'lottie-react-native';
+import { G, Line } from 'react-native-svg';
 
 export default function ECGScreen({ navigation }) {
   const [isMeasuring, setIsMeasuring] = useState(false);
@@ -31,6 +32,37 @@ export default function ECGScreen({ navigation }) {
     }, 30000); // 30초 후 결과 표시
   };
 
+  const CustomGrid = ({ x, y, data, ticks }) => (
+    <G>
+      {
+        // Horizontal grid
+        ticks.map(tick => (
+          <Line
+            key={tick}
+            x1="0%"
+            x2="100%"
+            y1={y(tick)}
+            y2={y(tick)}
+            stroke="rgba(0,0,0,0.2)"
+          />
+        ))
+      }
+      {
+        // Vertical grid
+        data.map((_, index) => (
+          <Line
+            key={index}
+            y1="0%"
+            y2="100%"
+            x1={x(index)}
+            x2={x(index)}
+            stroke="rgba(0,0,0,0.2)"
+          />
+        ))
+      }
+    </G>
+  );
+
   return (
     <View style={styles.container}>
       {isMeasuring ? (
@@ -43,8 +75,14 @@ export default function ECGScreen({ navigation }) {
             contentInset={{ top: 20, bottom: 20 }}
             curve={shape.curveNatural}
           >
-            <Grid />
+            <CustomGrid />
           </LineChart>
+          <LottieView
+            source={require('./lottie_heartrate.json')}
+            autoPlay
+            loop
+            style={styles.animation}
+          />
         </>
       ) : (
         <View>
@@ -79,5 +117,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     margin: 20,
     textAlign: 'center',
+  },
+  animation: {
+    width: 200,
+    height: 200,
+    marginTop: 20,
   },
 });
